@@ -1,0 +1,16 @@
+{
+  "name": "jem-jenny-wedding-rsvp",
+  "version": "1.0.0",
+  "description": "Wedding RSVP — Jem & Jenny (Vercel Functions + Neon Postgres)",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  }
+}

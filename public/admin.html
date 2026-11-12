@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>RSVP Admin — Jem &amp; Jenny</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Pinyon+Script&family=Cinzel:wght@400;500;600;700&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      /* v2 template — Dusty Blue Garden (Jem & Jenny).
+         Variable names kept from the original admin. */
+      --maroon-deep: #3E525C;   /* deep slate */
+      --maroon-dark: #4E6470;
+      --maroon:      #748B96;   /* slate blue */
+      --maroon-mid:  #8EA2AC;
+
+      --pink:      #D6A565;
+      --pink-dark: #667E8A;
+      --pink-lt:   #F1F3F5;
+
+      --cream:     #EEF0EE;
+      --cream-lt:  #F9F9F8;
+      --white:     #ffffff;
+
+      --text-light:      #F9F9F8;
+      --text-light-soft: rgba(246,250,253,0.88);
+      --text-light-muted:rgba(246,250,253,0.6);
+
+      --ink:        #3E525C;
+      --ink-soft:   rgba(62,82,92,0.78);
+      --ink-muted:  rgba(62,82,92,0.55);
+
+      --border:     rgba(116,139,150,0.2);
+      --border-mid: rgba(116,139,150,0.38);
+
+      --good:  #4F7F6A;
+      --bad:   #B0505F;
+      --pend:  #A8873E;
+
+      --transition: 0.22s cubic-bezier(0.4,0,0.2,1);
+      --sidebar-w: 250px;
+    }
+
+    * , *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Jost', sans-serif;
+      background: var(--cream-lt);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    button, input, select, textarea { font-family: inherit; }
+
+    /* ============================================================
+       LOGIN
+    ============================================================ */
+    #loginScreen {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: var(--maroon-deep);
+      background-image:
+        radial-gradient(ellipse 120% 55% at 50% -5%, rgba(255,255,255,0.22) 0%, transparent 58%),
+        radial-gradient(ellipse 65% 75% at 0% 100%, rgba(74,52,48,0.97) 0%, transparent 52%);
+      padding: 24px;
+    }
+    .login-card {
+      width: 100%; max-width: 380px; padding: 3px;
+      background: linear-gradient(145deg, var(--cream-lt), var(--pink-lt), var(--pink), var(--cream-lt));
+      box-shadow: 0 40px 100px rgba(74,52,48,0.4);
+      animation: loginIn 0.9s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    @keyframes loginIn { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    .login-card-inner {
+      background: var(--maroon-dark);
+      padding: 44px 38px;
+      text-align: center;
+      border: 1px solid var(--border-mid);
+    }
+    .login-eyebrow {
+      font-size: 9px; letter-spacing: 0.5em; text-transform: uppercase;
+      color: var(--pink-lt); opacity: 0.85; margin-bottom: 14px;
+    }
+    .login-title {
+      font-family: 'Pinyon Script', cursive; font-weight: 400; font-size: 44px; color: var(--cream-lt); margin-bottom: 6px; line-height: 1.15;
+    }
+    .login-sub {
+      font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 15px;
+      color: var(--text-light-soft); margin-bottom: 28px;
+    }
+    .login-input {
+      width: 100%; padding: 12px 14px; background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.35); color: var(--text-light);
+      font-size: 15px; margin-bottom: 14px; outline: none; transition: var(--transition);
+    }
+    .login-input:focus { border-color: var(--pink); background: rgba(255,255,255,0.1); }
+    .login-btn {
+      width: 100%; padding: 13px; background: linear-gradient(135deg, var(--pink-dark), var(--pink));
+      border: 1px solid var(--pink-lt); color: var(--cream-lt); cursor: pointer;
+      font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.34em; text-transform: uppercase;
+      transition: var(--transition);
+    }
+    .login-btn:hover { background: linear-gradient(135deg, var(--maroon), var(--maroon-mid)); }
+    .login-err {
+      margin-top: 14px; font-size: 13px; color: var(--bad); font-family: 'Cormorant Garamond', serif; font-style: italic;
+      min-height: 18px;
+    }
+
+    /* ============================================================
+       APP SHELL
+    ============================================================ */
+    #app { display: none; }
+    #app.show { display: block; }
+
+    .backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(74,52,48,0.45); z-index: 45;
+    }
+    .backdrop.show { display: block; }
+
+    .sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0; width: var(--sidebar-w);
+      background: linear-gradient(180deg, var(--maroon-deep), var(--maroon-dark) 65%, var(--maroon) 100%);
+      z-index: 50; display: flex; flex-direction: column;
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+      border-right: 1px solid rgba(255,255,255,0.22);
+    }
+    .sidebar-brand { padding: 30px 26px 22px; border-bottom: 1px solid rgba(255,255,255,0.18); }
+    .sidebar-eyebrow { font-size: 9px; letter-spacing: 0.4em; text-transform: uppercase; color: var(--pink-lt); opacity: 0.8; margin-bottom: 6px; }
+    .sidebar-names { font-family: 'Pinyon Script', cursive; font-weight: 400; font-size: 29px; color: var(--cream-lt); line-height: 1.15; }
+    .sidebar-close { display: none; }
+
+    .sidebar-nav { flex: 1; padding: 18px 14px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; margin-bottom: 4px; cursor: pointer;
+      font-size: 13px; font-weight: 500; letter-spacing: 0.03em;
+      color: var(--text-light-soft); transition: var(--transition);
+      border-left: 2px solid transparent;
+    }
+    .nav-item .ic { font-size: 15px; width: 18px; text-align: center; }
+    .nav-item:hover { background: rgba(255,255,255,0.12); color: var(--cream-lt); }
+    .nav-item.active { background: rgba(255,255,255,0.16); color: var(--cream-lt); border-left-color: #DDCEB0; }
+    .sidebar-foot {
+      padding: 16px 26px 22px; font-size: 10.5px; color: var(--text-light-muted);
+      border-top: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .main { margin-left: var(--sidebar-w); min-height: 100vh; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 34px; background: var(--white); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 20;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 14px; }
+    .hamburger { display: none; }
+    .page-title { font-family: 'Cinzel', serif; font-size: 20px; color: var(--maroon-deep); }
+    .page-sub { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+    .btn-logout {
+      padding: 9px 18px; background: transparent; border: 1px solid var(--border-mid);
+      color: var(--maroon); font-size: 11.5px; letter-spacing: 0.06em; cursor: pointer; transition: var(--transition);
+    }
+    .btn-logout:hover { background: var(--maroon-deep); color: var(--cream-lt); border-color: var(--maroon-deep); }
+    .topbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .topbar-actions .btn-logout { white-space: nowrap; }
+    @media (max-width: 540px) { .btn-pw-text { display: none; } .btn-pw { padding: 9px 12px; } }
+
+    .view { display: none; padding: 30px 34px 60px; }
+    .view.active { display: block; animation: viewIn 0.4s ease both; }
+    @keyframes viewIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ============================================================
+       DASHBOARD
+    ============================================================ */
+    .stat-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 8px;
+    }
+    .stat-card {
+      background: var(--white); border: 1px solid var(--border); padding: 20px 20px 18px;
+      position: relative; overflow: hidden; cursor: pointer; transition: var(--transition);
+    }
+    .stat-card:hover { border-color: var(--pink); transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,0,0,0.08); }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%;
+      background: linear-gradient(180deg, var(--maroon), var(--pink));
+    }
+    .stat-ic { font-size: 18px; margin-bottom: 10px; opacity: 0.7; }
+    .stat-val { font-family: 'Cinzel', serif; font-size: 30px; color: var(--maroon-deep); line-height: 1; }
+    .stat-label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); margin-top: 8px; }
+
+    .panel-row { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin: 24px 0; }
+    .panel { background: var(--white); border: 1px solid var(--border); padding: 22px 24px; }
+    .panel-title { font-family: 'Cinzel', serif; font-size: 14px; color: var(--maroon-deep); letter-spacing: 0.04em; margin-bottom: 16px; }
+
+    .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .bar-label { width: 110px; font-size: 12px; color: var(--ink-soft); flex-shrink: 0; }
+    .bar-track { flex: 1; height: 10px; background: var(--cream); position: relative; overflow: hidden; }
+    .bar-fill { height: 100%; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+    .bar-fill.accepted { background: var(--good); }
+    .bar-fill.declined { background: var(--bad); }
+    .bar-fill.pending  { background: var(--pend); }
+    .bar-val { width: 34px; text-align: right; font-size: 12px; font-weight: 600; color: var(--ink); }
+
+    .progress-label { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 8px; }
+    .progress-track { height: 8px; background: var(--cream); }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--maroon), var(--pink)); transition: width 0.6s ease; }
+
+    /* ============================================================
+       TOOLBARS, TABLES & PAGINATION
+    ============================================================ */
+    .toolbar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      background: var(--white); border: 1px solid var(--border); padding: 14px 18px; margin-bottom: 0;
+    }
+    .search-wrap { position: relative; flex: 1; min-width: 200px; }
+    .search-input {
+      width: 100%; padding: 10px 14px 10px 34px; border: 1px solid var(--border-mid);
+      font-size: 13.5px; outline: none; background: var(--cream-lt);
+    }
+    .search-input:focus { border-color: var(--pink); }
+    .search-ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; opacity: 0.5; }
+    .filter-select {
+      padding: 10px 14px; border: 1px solid var(--border-mid); background: var(--cream-lt); font-size: 13px; cursor: pointer;
+    }
+    .btn {
+      padding: 10px 16px; border: 1px solid var(--border-mid); background: var(--white);
+      font-size: 12px; letter-spacing: 0.03em; cursor: pointer; transition: var(--transition);
+      display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    }
+    .btn:hover { border-color: var(--maroon); }
+    .btn-primary { background: var(--maroon-deep); color: var(--cream-lt); border-color: var(--maroon-deep); }
+    .btn-primary:hover { background: var(--maroon-dark); }
+    .btn-danger { color: var(--bad); border-color: rgba(168,69,94,0.4); }
+    .btn-danger:hover { background: var(--bad); color: #fff; border-color: var(--bad); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn:disabled:hover { border-color: var(--border-mid); background: var(--white); }
+
+    .bulk-bar {
+      display: none; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 10px 18px; background: var(--pink-lt); border: 1px solid var(--pink);
+      border-top: none; font-size: 13px; color: var(--maroon-deep);
+    }
+    .bulk-bar.show { display: flex; }
+
+    .table-wrap { background: var(--white); border: 1px solid var(--border); border-top: none; overflow-x: auto; }
+    table.data { width: 100%; border-collapse: collapse; min-width: 760px; }
+    table.data th {
+      text-align: left; padding: 12px 14px; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--ink-soft); border-bottom: 1px solid var(--border); background: var(--cream-lt);
+      cursor: pointer; user-select: none; white-space: nowrap;
+    }
+    table.data th:hover { color: var(--maroon-deep); }
+    table.data td { padding: 13px 14px; font-size: 13.5px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    table.data tbody tr:hover { background: var(--cream-lt); }
+    .chk { width: 15px; height: 15px; cursor: pointer; accent-color: var(--maroon); }
+    .name-cell { font-weight: 600; color: var(--ink); }
+    .companion-count { font-size: 11.5px; color: var(--ink-muted); }
+
+    .badge {
+      display: inline-block; padding: 4px 10px; font-size: 10.5px; letter-spacing: 0.03em;
+      font-weight: 600; text-transform: uppercase;
+    }
+    .badge-accepted { background: rgba(95,107,88,0.14); color: var(--good); }
+    .badge-declined { background: rgba(168,69,94,0.12); color: var(--bad); }
+    .badge-pending  { background: rgba(176,138,74,0.14); color: var(--pend); }
+
+    .row-actions { display: flex; gap: 6px; }
+    .icon-btn {
+      width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border-mid); background: var(--white); cursor: pointer; font-size: 13px; transition: var(--transition);
+    }
+    .icon-btn:hover { border-color: var(--maroon); background: var(--cream-lt); }
+
+    .empty-state { padding: 60px 20px; text-align: center; color: var(--ink-muted); }
+    .empty-state .es-title { font-family: 'Cinzel', serif; font-size: 15px; color: var(--ink-soft); margin-bottom: 6px; }
+    .empty-state .es-sub { font-size: 12.5px; }
+
+    .pagination {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 14px 18px; background: var(--white); border: 1px solid var(--border); border-top: none; font-size: 12.5px; color: var(--ink-soft);
+    }
+    .page-btns { display: flex; gap: 6px; }
+    .page-btns button {
+      width: 30px; height: 30px; border: 1px solid var(--border-mid); background: var(--white); cursor: pointer; font-size: 12px;
+    }
+    .page-btns button.active { background: var(--maroon-deep); color: var(--cream-lt); border-color: var(--maroon-deep); }
+    .page-btns button:disabled { opacity: 0.35; cursor: not-allowed; }
+    .pagination.mobile-only { display: none; }
+
+    .guest-cards { display: none; }
+    .guest-card {
+      background: var(--white); border: 1px solid var(--border); padding: 16px; margin-bottom: 10px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .gc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .gc-name { font-weight: 600; font-size: 14.5px; }
+    .gc-meta { font-size: 12px; color: var(--ink-muted); }
+    .gc-row { display: flex; align-items: center; justify-content: space-between; }
+    .gc-actions { display: flex; gap: 6px; margin-top: 6px; }
+
+    /* ============================================================
+       SETTINGS
+    ============================================================ */
+    .settings-card {
+      background: var(--white); border: 1px solid var(--border); padding: 26px 28px; max-width: 520px; margin-bottom: 20px;
+    }
+    .settings-title { font-family: 'Cinzel', serif; font-size: 15px; color: var(--maroon-deep); margin-bottom: 6px; }
+    .settings-sub { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 13.5px; color: var(--ink-soft); margin-bottom: 20px; }
+
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-top: 1px solid var(--border); }
+    .toggle-row:first-of-type { border-top: none; }
+    .toggle-row-label { font-size: 13.5px; font-weight: 500; }
+    .toggle-row-sub { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+    .switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch-track {
+      position: absolute; inset: 0; background: var(--border-mid); cursor: pointer; transition: var(--transition);
+    }
+    .switch-thumb {
+      position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: var(--transition);
+    }
+    .switch input:checked + .switch-track { background: var(--good); }
+    .switch input:checked + .switch-track .switch-thumb { transform: translateX(20px); }
+
+    /* ============================================================
+       MODALS
+    ============================================================ */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(74,52,48,0.5); display: flex; align-items: center; justify-content: center;
+      z-index: 200; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+    }
+    .modal-overlay.active { opacity: 1; pointer-events: all; }
+    .modal-box {
+      width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto;
+      background: var(--white); transform: scale(0.95) translateY(12px); transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
+      border-top: 3px solid var(--maroon);
+    }
+    .modal-overlay.active .modal-box { transform: scale(1) translateY(0); }
+    .modal-head { padding: 20px 26px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font-family: 'Cinzel', serif; font-size: 16px; color: var(--maroon-deep); }
+    .modal-x { cursor: pointer; font-size: 16px; color: var(--ink-muted); background: none; border: none; }
+    .modal-body { padding: 22px 26px; }
+    .modal-foot { padding: 16px 26px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+
+    .field-row { margin-bottom: 16px; }
+    .field-row label { display: block; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
+    .field-row input[type="text"] {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border-mid); font-size: 14px; outline: none;
+    }
+    .field-row input[type="text"]:focus { border-color: var(--maroon); }
+    .companion-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+    .companion-grid .field-row { margin-bottom: 0; }
+
+    .view-detail-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+    .view-detail-row:last-child { border-bottom: none; }
+    .vd-name { font-weight: 500; }
+    .vd-meta { font-size: 11.5px; color: var(--ink-muted); }
+
+    .import-drop {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      width: 100%; box-sizing: border-box;
+      border: 2px dashed var(--border-mid); border-radius: 4px;
+      padding: 34px 20px; text-align: center; cursor: pointer; transition: var(--transition);
+    }
+    .import-drop:hover, .import-drop.drag { border-color: var(--maroon); background: var(--cream-lt); }
+    .import-drop input { display: none; }
+    .import-icon { font-size: 24px; margin-bottom: 8px; opacity: 0.6; }
+    .import-hint { font-size: 12px; color: var(--ink-muted); margin-top: 6px; }
+    .import-preview { margin-top: 16px; font-size: 12.5px; color: var(--ink-soft); }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; background: var(--maroon-deep); color: var(--cream-lt);
+      padding: 13px 20px; font-size: 13px; z-index: 300; opacity: 0; transform: translateY(10px); transition: var(--transition);
+      pointer-events: none; max-width: 320px; border-left: 3px solid var(--pink);
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.err { border-left-color: var(--bad); }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 980px) {
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .panel-row { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 860px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-close { display: block; position: absolute; top: 18px; right: 18px; background: none; border: none; color: var(--cream-lt); font-size: 16px; cursor: pointer; }
+      .main { margin-left: 0; }
+      .hamburger {
+        display: flex; flex-direction: column; gap: 4px; width: 22px; cursor: pointer; background: none; border: none; padding: 4px;
+      }
+      .hamburger span { display: block; height: 2px; background: var(--maroon-deep); }
+      .topbar { padding: 16px 18px; }
+      .view { padding: 18px 16px 50px; }
+      .table-wrap { display: none; }
+      .pagination.desktop-only { display: none; }
+      .pagination.mobile-only { display: flex; }
+      .guest-cards { display: block; }
+      .toolbar { padding: 12px 14px; }
+    }
+    @media (max-width: 540px) {
+      .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .stat-val { font-size: 24px; }
+      .modal-body, .modal-head, .modal-foot { padding-left: 18px; padding-right: 18px; }
+      .companion-grid { grid-template-columns: 1fr; }
+    }
+
+    .fab-refresh {
+      display: none; position: fixed; bottom: 22px; right: 20px; z-index: 60;
+      width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer;
+      background: var(--maroon-deep); color: var(--cream-lt); font-size: 20px;
+      align-items: center; justify-content: center;
+      box-shadow: 0 10px 26px rgba(74,52,48,0.4); transition: var(--transition);
+    }
+    .fab-refresh:hover { background: var(--maroon-dark); }
+    .fab-refresh.spinning { animation: fabSpin 0.6s linear; }
+    @keyframes fabSpin { to { transform: rotate(360deg); } }
+    @media (max-width: 860px) { .fab-refresh { display: flex; } }
+    #app:not(.show) ~ .fab-refresh { display: none !important; }
+
+    .last-refreshed { font-size: 11px; color: var(--ink-muted); white-space: nowrap; }
+    .dash-toolbar {
+      display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-bottom: 16px;
+    }
+
+    /* ── Dusty-blue admin: pale-blue sign-in with a blue frame, 44px menu button ── */
+    #loginScreen { background: linear-gradient(180deg, #FBFBFA 0%, #EEF1F2 60%, #E4EAE2 100%) !important; background-image: none; }
+    .login-card { background: linear-gradient(145deg, #A9B6C7, #DDCEB0 35%, #F9F9F8 55%, #B8C4B3 80%, #748B96) !important; padding: 3px !important; border-radius: 6px !important;
+                  box-shadow: 0 24px 60px rgba(62,82,92,0.16) !important; }
+    .login-card-inner { background: #FFFFFF !important; border: 1px solid rgba(116,139,150,0.35) !important; border-radius: 4px !important; }
+    .login-eyebrow { color: #748B96 !important; opacity: 1 !important; }
+    .login-title { color: #667E8A !important; }
+    .login-sub { color: #5E717A !important; }
+    .login-input { background: #FFFFFF !important; border: 1px solid #DDCEB0 !important; color: #3E525C !important; border-radius: 999px !important; }
+    .login-input::placeholder { color: rgba(62,82,92,0.45) !important; }
+    .login-input:focus { border-color: #667E8A !important; }
+    .login-btn { background: #667E8A !important; border: 1px solid #34474F !important; color: #fff !important; border-radius: 999px !important; }
+    .login-btn:hover { background: #34474F !important; }
+    .login-btn:disabled { opacity: .6; cursor: wait; }
+    .login-err { color: #B0505F !important; }
+    @media (max-width: 900px) {
+      .hamburger { width: 44px !important; height: 44px !important; padding: 12px 11px !important; justify-content: center !important;
+                   border: 1px solid rgba(116,139,150,0.35) !important; border-radius: 10px !important; background: #FFFFFF !important; }
+    }
+
+    /* password form */
+    .pw-form { display: grid; gap: 12px; }
+    .pw-form input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-mid); font-size: 14px; outline: none; background: var(--cream-lt); }
+    .pw-form input:focus { border-color: var(--maroon); }
+    .pw-note { font-size: 12px; color: var(--bad); min-height: 16px; }
+    .default-pw-note { margin-top: 10px; padding: 10px 12px; background: var(--pink-lt); border-left: 3px solid var(--pink); font-size: 12.5px; color: var(--maroon-deep); display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════ LOGIN ══════════════ -->
+  <div id="loginScreen">
+    <div class="login-card"><div class="login-card-inner">
+      <p class="login-eyebrow">RSVP Admin</p>
+      <h1 class="login-title">Jem &amp; Jenny</h1>
+      <p class="login-sub">Sign in to manage the guest list</p>
+      <input type="password" class="login-input" id="loginPassword" placeholder="Admin password" autocomplete="off" />
+      <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
+      <p class="login-err" id="loginErr"></p>
+    </div></div>
+  </div>
+
+  <!-- ══════════════ APP ══════════════ -->
+  <div id="app">
+    <div class="backdrop" id="backdrop"></div>
+
+    <nav class="sidebar" id="sidebar">
+      <button class="sidebar-close" id="sidebarClose">&#10005;</button>
+      <div class="sidebar-brand">
+        <p class="sidebar-eyebrow">RSVP Admin</p>
+        <div class="sidebar-names">Jem &amp; Jenny</div>
+      </div>
+      <div class="sidebar-nav">
+        <div class="nav-item active" data-view="dashboard"><span class="ic">&#9670;</span> Dashboard</div>
+        <div class="nav-item" data-view="guestlist"><span class="ic">&#9776;</span> Guest List</div>
+        <div class="nav-item" data-view="responses"><span class="ic">&#9993;</span> Responses</div>
+        <div class="nav-item" data-view="settings"><span class="ic">&#9881;</span> Settings</div>
+      </div>
+      <div class="sidebar-foot">&copy; 2026 All Rights Reserved &middot; RSVP Website by Love, Anne</div>
+    </nav>
+
+    <div class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="hamburger" id="hamburgerBtn"><span></span><span></span><span></span></button>
+          <div>
+            <div class="page-title" id="pageTitle">Dashboard</div>
+            <div class="page-sub" id="pageSub">Overview of your guest responses</div>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn-logout btn-pw" onclick="openPwModal()" title="Change admin password">&#128273;<span class="btn-pw-text"> Change Password</span></button>
+          <button class="btn-logout" onclick="doLogout()">Log Out</button>
+        </div>
+      </div>
+
+      <!-- ═══ DASHBOARD VIEW ═══ -->
+      <div class="view active" id="view-dashboard">
+        <div class="dash-toolbar">
+          <span class="last-refreshed" id="lastRefreshedDash"></span>
+          <button class="btn" id="refreshBtnDash" onclick="refreshAll()">&#8635; Refresh</button>
+        </div>
+        <div class="stat-grid" id="statGrid"></div>
+
+        <div class="panel-row">
+          <div class="panel">
+            <div class="panel-title">RSVP Status</div>
+            <div class="bar-row">
+              <div class="bar-label">Accepted</div>
+              <div class="bar-track"><div class="bar-fill accepted" id="barAccepted" style="width:0%"></div></div>
+              <div class="bar-val" id="valAccepted">0</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Declined</div>
+              <div class="bar-track"><div class="bar-fill declined" id="barDeclined" style="width:0%"></div></div>
+              <div class="bar-val" id="valDeclined">0</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Pending</div>
+              <div class="bar-track"><div class="bar-fill pending" id="barPending" style="width:0%"></div></div>
+              <div class="bar-val" id="valPending">0</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Response Progress</div>
+            <div class="progress-label" id="progressLabel">0 of 0 responded</div>
+            <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ GUEST LIST VIEW ═══ -->
+      <div class="view" id="view-guestlist">
+        <div class="toolbar">
+          <div class="search-wrap">
+            <span class="search-ic">&#128269;</span>
+            <input type="text" class="search-input" id="searchInput" placeholder="Search guest name…" />
+          </div>
+          <select class="filter-select" id="filterSelect">
+            <option value="all">All Guests</option>
+            <option value="responded">Responded</option>
+            <option value="pending">Pending</option>
+            <option value="attending">Attending</option>
+            <option value="declined">Declined</option>
+          </select>
+          <button class="btn" id="refreshBtn" onclick="refreshAll()">&#8635; Refresh</button>
+          <span class="last-refreshed" id="lastRefreshedToolbar"></span>
+          <button class="btn" onclick="openImportModal()">&#8593; Import</button>
+          <button class="btn" onclick="exportGuests()">&#8595; Export</button>
+          <button class="btn btn-primary" onclick="openAddModal()">+ Add Guest</button>
+        </div>
+        <div class="bulk-bar" id="bulkBar">
+          <span id="bulkCount">0 selected</span>
+          <button class="btn btn-danger" onclick="bulkDelete()">Delete Selected</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th style="width:36px;"><input type="checkbox" class="chk" id="selectAll" onchange="toggleSelectAll()" /></th>
+                <th data-sort="mainGuest">Main Guest</th>
+                <th data-sort="invited">Invited</th>
+                <th data-sort="status">Status</th>
+                <th data-sort="totalSeat">Attending</th>
+                <th style="width:110px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+          <div class="empty-state" id="emptyState" style="display:none;">
+            <div class="es-title">No guests found</div>
+            <div class="es-sub">Try a different search or add a new guest.</div>
+          </div>
+        </div>
+        <div class="pagination desktop-only" id="pagination"></div>
+
+        <div class="guest-cards" id="guestCards"></div>
+        <div class="pagination mobile-only" id="paginationMobile"></div>
+      </div>
+
+      <!-- ═══ RESPONSES VIEW (INDIVIDUAL PER GUEST) ═══ -->
+      <div class="view" id="view-responses">
+        <div class="toolbar">
+          <div class="search-wrap">
+            <span class="search-ic">&#128269;</span>
+            <input type="text" class="search-input" id="searchResponseInput" placeholder="Search attendee name or group…" />
+          </div>
+          <select class="filter-select" id="filterResponseSelect">
+            <option value="all">All Individual Guests</option>
+            <option value="attending">Attending Only</option>
+            <option value="declined">Declined Only</option>
+            <option value="main">Main Guests Only</option>
+            <option value="companion">Companions Only</option>
+          </select>
+          <button class="btn" onclick="refreshAll()">&#8635; Refresh</button>
+          <button class="btn btn-primary" onclick="exportResponses()">&#8595; Export Individual List</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Guest Full Name</th>
+                <th>Role / Type</th>
+                <th>Individual Status</th>
+                <th>Reservation Under</th>
+                <th>Submitted Date</th>
+                <th style="width:80px;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="responseTableBody"></tbody>
+          </table>
+          <div class="empty-state" id="responseEmptyState" style="display:none;">
+            <div class="es-title">No responses received yet</div>
+            <div class="es-sub">Individual attendee responses will appear here as soon as guests submit.</div>
+          </div>
+        </div>
+        <div class="pagination desktop-only" id="paginationResponses"></div>
+        <div class="guest-cards" id="responseCards"></div>
+        <div class="pagination mobile-only" id="paginationResponsesMobile"></div>
+      </div>
+
+      <!-- ═══ SETTINGS VIEW ═══ -->
+      <div class="view" id="view-settings">
+        <div class="settings-card">
+          <div class="settings-title">RSVP Link</div>
+          <div class="settings-sub">Turn guest submissions on or off without redeploying.</div>
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-row-label">RSVP is open</div>
+              <div class="toggle-row-sub" id="rsvpStatusSub">Guests can look up their name and submit</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="rsvpToggle" onchange="handleRsvpToggle()" />
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-title">Admin Password</div>
+          <div class="settings-sub">Change the password used to sign in to this dashboard. Other signed-in devices will be signed out.</div>
+          <div class="pw-form">
+            <input type="password" id="pwCurrent" placeholder="Current password" autocomplete="current-password" />
+            <input type="password" id="pwNew" placeholder="New password (at least 6 characters)" autocomplete="new-password" />
+            <input type="password" id="pwConfirm" placeholder="Confirm new password" autocomplete="new-password" />
+            <div class="pw-note" id="pwNote"></div>
+            <div><button class="btn btn-primary" id="pwSaveBtn" onclick="changePassword()">Update Password</button></div>
+          </div>
+          <div class="default-pw-note" id="defaultPwNote">You are still using the default password. Please change it before sharing this dashboard.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ ADD / EDIT GUEST MODAL ══════════════ -->
+  <div class="modal-overlay" id="guestModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <span class="modal-title" id="guestModalTitle">Add Guest</span>
+        <button class="modal-x" onclick="closeModal('guestModal')">&#10005;</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-row">
+          <label>Main Guest Full Name</label>
+          <input type="text" id="fMainGuest" placeholder="e.g. Juan dela Cruz" />
+        </div>
+        <div class="field-row">
+          <label>Companions (fixed — up to 19)</label>
+        </div>
+        <div class="companion-grid" id="companionFields"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal('guestModal')">Cancel</button>
+        <button class="btn btn-primary" id="guestSaveBtn" onclick="saveGuest()">Save Guest</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ CHANGE PASSWORD MODAL ══════════════ -->
+  <div class="modal-overlay" id="pwModal">
+    <div class="modal-box" style="max-width:420px;">
+      <div class="modal-head">
+        <span class="modal-title">Change Password</span>
+        <button class="modal-x" onclick="closeModal('pwModal')">&#10005;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">Other signed-in devices will be signed out after the change.</p>
+        <div class="pw-form">
+          <input type="password" id="mpwCurrent" placeholder="Current password" autocomplete="current-password" />
+          <input type="password" id="mpwNew" placeholder="New password (at least 6 characters)" autocomplete="new-password" />
+          <input type="password" id="mpwConfirm" placeholder="Confirm new password" autocomplete="new-password" />
+          <div class="pw-note" id="mpwNote"></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal('pwModal')">Cancel</button>
+        <button class="btn btn-primary" id="mpwSaveBtn" onclick="changePassword('m')">Update Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ VIEW GUEST MODAL ══════════════ -->
+  <div class="modal-overlay" id="viewModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <span class="modal-title">Guest Details</span>
+        <button class="modal-x" onclick="closeModal('viewModal')">&#10005;</button>
+      </div>
+      <div class="modal-body" id="viewModalBody"></div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal('viewModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ DELETE CONFIRM MODAL ══════════════ -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal-box" style="max-width:400px;">
+      <div class="modal-head">
+        <span class="modal-title">Delete Guest?</span>
+        <button class="modal-x" onclick="closeModal('deleteModal')">&#10005;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13.5px;color:var(--ink-soft);">This will permanently remove <strong id="deleteTargetName">this guest</strong> from the guest list, along with their RSVP response if they've already submitted one. This cannot be undone.</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal('deleteModal')">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ STAT DETAIL MODAL ══════════════ -->
+  <div class="modal-overlay" id="statModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <span class="modal-title" id="statModalTitle">Details</span>
+        <button class="modal-x" onclick="closeModal('statModal')">&#10005;</button>
+      </div>
+      <div class="modal-body" id="statModalBody"></div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal('statModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ IMPORT MODAL ══════════════ -->
+  <div class="modal-overlay" id="importModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <span class="modal-title">Import Guest List</span>
+        <button class="modal-x" onclick="closeModal('importModal')">&#10005;</button>
+      </div>
+      <div class="modal-body">
+        <label class="import-drop" id="importDrop">
+          <input type="file" id="importFile" accept=".csv,.xlsx,.xls" onchange="handleImportFile(event)" />
+          <div class="import-icon">&#8593;</div>
+          <div>Click or drag a CSV / XLSX file here</div>
+          <div class="import-hint">Columns: Main Guest, Guest 2, Guest 3 … Guest 20</div>
+        </label>
+        <div class="import-preview" id="importPreview"></div>
+        <button class="btn" style="margin-top:14px;" onclick="downloadTemplate()">Download Template</button>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeModal('importModal')">Cancel</button>
+        <button class="btn btn-primary" id="importConfirmBtn" onclick="confirmImport()" disabled>Import</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="fab-refresh" id="fabRefresh" onclick="refreshAll()" title="Refresh data">&#8635;</button>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    /* ============================================================
+       Vercel + Neon: google.script.run stand-in.
+       Every call becomes POST /api/rpc { fn, args } with the admin
+       session token; the success / failure handlers work as before.
+    ============================================================ */
+    var AUTH_KEY = 'jnj_rsvp_admin_token';
+    function getToken() { try { return sessionStorage.getItem(AUTH_KEY) || ''; } catch (e) { return ''; } }
+    function setToken(t) { try { if (t) sessionStorage.setItem(AUTH_KEY, t); else sessionStorage.removeItem(AUTH_KEY); } catch (e) {} }
+
+    function callServer(fn, args) {
+      return fetch('/api/rpc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': getToken() },
+        body: JSON.stringify({ fn: fn, args: args })
+      }).then(function(res) {
+        return res.json().catch(function() { return null; }).then(function(data) {
+          if (res.status === 401 && data && data.authError) {
+            if (typeof sessionExpired === 'function') sessionExpired(data.message);
+            var e = new Error(data.message); e.authError = true; throw e;
+          }
+          if (!res.ok) throw new Error((data && data.message) || ('The server returned HTTP ' + res.status + '. Open /api/health for details.'));
+          if (data && data.token) setToken(data.token);
+          return data;
+        });
+      });
+    }
+
+    var google = { script: {} };
+    Object.defineProperty(google.script, 'run', {
+      get: function() {
+        var ok = function() {}, fail = function() {};
+        var runner = new Proxy({}, {
+          get: function(_, prop) {
+            if (prop === 'withSuccessHandler') return function(f) { ok = f; return runner; };
+            if (prop === 'withFailureHandler') return function(f) { fail = f; return runner; };
+            return function() {
+              var args = Array.prototype.slice.call(arguments);
+              callServer(String(prop), args).then(
+                function(r) { ok(r); },
+                function(err) { if (!err.authError) fail(err); }
+              );
+            };
+          }
+        });
+        return runner;
+      }
+    });
+  </script>
+
+  <script>
+    /* ============================================================
+       STATE
+    ============================================================ */
+    var allGuests           = [];
+    var filteredGuests      = [];
+    var allIndividualGuests = [];
+    var filteredResponses   = [];
+    var currentPage         = 1;
+    var currentResponsePage = 1;
+    var PAGE_SIZE           = 10;
+    var sortKey             = null;
+    var sortDir             = 1;
+    var selectedIds         = new Set();
+    var editingId           = null;
+    var deleteId            = null;
+    var importRows          = null;
+    var MAX_COMPANIONS      = 19;
+
+    /* ============================================================
+       STATUS HELPER
+    ============================================================ */
+    function normalizeStatus(st) {
+      if (!st) return 'pending';
+      var s = String(st).trim().toLowerCase();
+      if (s === 'attending' || s === 'accepted' || s === 'joyfully accepts') return 'accepted';
+      if (s === 'declined' || s === 'regretfully declines') return 'declined';
+      return 'pending';
+    }
+
+    function guestStatusKey(g) {
+      if (!g) return 'pending';
+      if (g.responded || (g.mainStatus && normalizeStatus(g.mainStatus) !== 'pending')) {
+        return normalizeStatus(g.mainStatus);
+      }
+      return 'pending';
+    }
+
+    /* ============================================================
+       LOGIN
+    ============================================================ */
+    document.getElementById('loginPassword').addEventListener('keydown', function(e){ if (e.key === 'Enter') doLogin(); });
+
+    function doLogin() {
+      var pw = document.getElementById('loginPassword').value;
+      var btn = document.getElementById('loginBtn');
+      btn.disabled = true;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          if (res && res.success) {
+            enterApp();
+          } else {
+            document.getElementById('loginErr').textContent = (res && res.message) || 'Incorrect password.';
+          }
+        })
+        .withFailureHandler(function() {
+          btn.disabled = false;
+          document.getElementById('loginErr').textContent = 'Connection error. Please try again.';
+        })
+        .adminLogin(pw);
+    }
+
+    var appStarted = false;
+    function enterApp() {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('app').classList.add('show');
+      document.getElementById('loginPassword').value = '';
+      document.getElementById('loginErr').textContent = '';
+      if (!appStarted) { appStarted = true; initApp(); }
+      else { silentRefresh(); startAutoRefresh(); }
+    }
+
+    function sessionExpired(msg) {
+      doLogout();
+      document.getElementById('loginErr').textContent = msg || 'Your session has expired. Please sign in again.';
+    }
+
+    // Already signed in on this tab? Skip the login screen.
+    if (getToken()) {
+      google.script.run
+        .withSuccessHandler(function(res) { if (res && res.success) enterApp(); })
+        .withFailureHandler(function() {})
+        .checkSession();
+    }
+
+    function doLogout() {
+      setToken('');
+      document.querySelectorAll('.modal-overlay.active').forEach(function(m) { m.classList.remove('active'); });
+      stopAutoRefresh();
+      document.getElementById('app').classList.remove('show');
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('loginPassword').value = '';
+      document.getElementById('loginErr').textContent = '';
+    }
+
+    /* ============================================================
+       APP INIT / NAV
+    ============================================================ */
+    function initApp() {
+      loadDashboard();
+      loadGuestList();
+      loadSettings();
+      loadPasswordNote();
+      buildCompanionFields();
+      updateLastRefreshedLabel();
+      startAutoRefresh();
+    }
+
+    var autoRefreshTimer = null;
+    var AUTO_REFRESH_MS  = 30000;
+
+    function startAutoRefresh() {
+      stopAutoRefresh();
+      autoRefreshTimer = setInterval(function() {
+        if (document.hidden) return;
+        if (document.querySelectorAll('.modal-overlay.active').length) return;
+        silentRefresh();
+      }, AUTO_REFRESH_MS);
+    }
+    function stopAutoRefresh() {
+      if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+    }
+    function silentRefresh() {
+      loadDashboard();
+      loadGuestList();
+      loadSettings();
+      updateLastRefreshedLabel();
+    }
+    function updateLastRefreshedLabel() {
+      var stamp = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var els = document.querySelectorAll('.last-refreshed');
+      els.forEach(function(el) { el.textContent = stamp; });
+    }
+
+    document.querySelectorAll('.nav-item').forEach(function(item) {
+      item.addEventListener('click', function() {
+        var v = this.getAttribute('data-view');
+        document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+        this.classList.add('active');
+        document.querySelectorAll('.view').forEach(function(vw){ vw.classList.remove('active'); });
+        document.getElementById('view-' + v).classList.add('active');
+        var titles = {
+          dashboard: ['Dashboard','Overview of your guest responses'],
+          guestlist: ['Guest List','Manage invited guests and companions'],
+          responses: ['Individual Responses','Complete list of all individual guest confirmations'],
+          settings: ['Settings','RSVP link and admin password']
+        };
+        document.getElementById('pageTitle').textContent = titles[v][0];
+        document.getElementById('pageSub').textContent = titles[v][1];
+        if (v === 'responses') {
+          buildIndividualGuestList();
+          applyResponseFilters();
+        }
+        closeSidebar();
+      });
+    });
+
+    function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('backdrop').classList.add('show'); }
+    function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('backdrop').classList.remove('show'); }
+    document.getElementById('hamburgerBtn').addEventListener('click', openSidebar);
+    document.getElementById('sidebarClose').addEventListener('click', closeSidebar);
+    document.getElementById('backdrop').addEventListener('click', closeSidebar);
+
+    function showToast(msg, isErr) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show' + (isErr ? ' err' : '');
+      setTimeout(function(){ t.classList.remove('show'); }, 3200);
+    }
+
+    /* ============================================================
+       DASHBOARD
+    ============================================================ */
+    function loadDashboard() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.success) { showToast((res && res.message) || 'Failed to load dashboard.', true); return; }
+          renderDashboard(res.stats);
+        })
+        .withFailureHandler(function() { showToast('Connection error loading dashboard.', true); })
+        .getDashboardStats();
+    }
+
+    function renderDashboard(s) {
+      var cards = [
+        { key: 'totalMainGuests',  label: 'Total Main Guests', value: s.totalMainGuests, ic: '&#128100;' },
+        { key: 'totalInvited',     label: 'Total Invited', value: s.totalInvited, ic: '&#128101;' },
+        { key: 'totalResponded',   label: 'Responded', value: s.totalResponded, ic: '&#9993;' },
+        { key: 'totalPending',     label: 'Pending', value: s.totalPending, ic: '&#8987;' },
+        { key: 'totalAccepted',    label: 'Accepted', value: s.totalAccepted, ic: '&#10003;' },
+        { key: 'totalDeclined',    label: 'Declined', value: s.totalDeclined, ic: '&#10005;' },
+        { key: 'totalAttending',   label: 'Guests Attending', value: s.totalAttending, ic: '&#127881;' },
+        { key: 'totalNotAttending',label: 'Not Attending', value: s.totalNotAttending, ic: '&#128683;' }
+      ];
+      document.getElementById('statGrid').innerHTML = cards.map(function(c) {
+        return '<div class="stat-card" onclick="openStatModal(\'' + c.key + '\', \'' + c.label.replace(/'/g, "\\'") + '\')">' +
+          '<div class="stat-ic">' + c.ic + '</div><div class="stat-val">' + c.value + '</div><div class="stat-label">' + c.label + '</div></div>';
+      }).join('');
+
+      var totalMain = s.totalMainGuests || 0;
+      var pct = function(v) { return totalMain ? Math.round((v / totalMain) * 100) : 0; };
+      document.getElementById('barAccepted').style.width = pct(s.totalAccepted) + '%';
+      document.getElementById('barDeclined').style.width = pct(s.totalDeclined) + '%';
+      document.getElementById('barPending').style.width  = pct(s.totalPending) + '%';
+      document.getElementById('valAccepted').textContent = s.totalAccepted;
+      document.getElementById('valDeclined').textContent = s.totalDeclined;
+      document.getElementById('valPending').textContent  = s.totalPending;
+
+      document.getElementById('progressLabel').textContent = s.totalResponded + ' of ' + totalMain + ' responded';
+      document.getElementById('progressFill').style.width = pct(s.totalResponded) + '%';
+    }
+
+    function refreshAll() {
+      var btn = document.getElementById('refreshBtn');
+      var btnDash = document.getElementById('refreshBtnDash');
+      var fab = document.getElementById('fabRefresh');
+      if (btn) btn.disabled = true;
+      if (btnDash) btnDash.disabled = true;
+      if (fab) fab.classList.add('spinning');
+      loadDashboard();
+      loadGuestList();
+      loadSettings();
+      updateLastRefreshedLabel();
+      showToast('Data refreshed.');
+      startAutoRefresh();
+      setTimeout(function() {
+        if (btn) btn.disabled = false;
+        if (btnDash) btnDash.disabled = false;
+        if (fab) fab.classList.remove('spinning');
+      }, 500);
+    }
+
+    function getStatGuestList(key) {
+      var items = [];
+      allGuests.forEach(function(g) {
+        var status = guestStatusKey(g);
+        var isResp = (g.responded || status !== 'pending');
+        switch (key) {
+          case 'totalMainGuests':
+            items.push({ name: g.mainGuest, meta: g.invited + ' invited' });
+            break;
+          case 'totalInvited':
+            items.push({ name: g.mainGuest, meta: 'Main Guest' });
+            g.companions.forEach(function(c, i) {
+              if (c) items.push({ name: c, meta: 'Guest ' + (i + 2) + ' \u00b7 with ' + g.mainGuest });
+            });
+            break;
+          case 'totalResponded':
+            if (isResp) items.push({ name: g.mainGuest, meta: status === 'accepted' ? 'Attending' : 'Declined' });
+            break;
+          case 'totalPending':
+            if (!isResp) items.push({ name: g.mainGuest, meta: 'Awaiting response' });
+            break;
+          case 'totalAccepted':
+            if (isResp && status === 'accepted') items.push({ name: g.mainGuest, meta: 'Accepted' });
+            break;
+          case 'totalDeclined':
+            if (isResp && status === 'declined') items.push({ name: g.mainGuest, meta: 'Declined' });
+            break;
+          case 'totalAttending':
+            if (isResp) {
+              if (status === 'accepted') items.push({ name: g.mainGuest, meta: 'Main Guest \u00b7 Attending' });
+              g.companions.forEach(function(c, i) {
+                if (c && normalizeStatus(g.companionStatuses[i]) === 'accepted') {
+                  items.push({ name: c, meta: 'Guest ' + (i + 2) + ' \u00b7 Attending' });
+                }
+              });
+            }
+            break;
+          case 'totalNotAttending':
+            if (isResp) {
+              if (status !== 'accepted') items.push({ name: g.mainGuest, meta: 'Main Guest \u00b7 Not Attending' });
+              g.companions.forEach(function(c, i) {
+                if (c && normalizeStatus(g.companionStatuses[i]) !== 'accepted') {
+                  items.push({ name: c, meta: 'Guest ' + (i + 2) + ' \u00b7 Not Attending' });
+                }
+              });
+            }
+            break;
+        }
+      });
+      return items;
+    }
+
+    function openStatModal(key, label) {
+      document.getElementById('statModalTitle').textContent = label;
+      var items = getStatGuestList(key);
+      var body = document.getElementById('statModalBody');
+      if (!items.length) {
+        body.innerHTML = '<p style="font-size:13px;color:var(--ink-muted);padding:24px 0;text-align:center;">No guests in this category yet.</p>';
+      } else {
+        body.innerHTML = items.map(function(it) {
+          return '<div class="view-detail-row"><span class="vd-name">' + escapeHtml(it.name) + '</span><span class="vd-meta">' + escapeHtml(it.meta) + '</span></div>';
+        }).join('');
+      }
+      openModal('statModal');
+    }
+
+    /* ============================================================
+       GUEST LIST
+    ============================================================ */
+    function loadGuestList() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.success) { showToast((res && res.message) || 'Failed to load guest list.', true); allGuests = []; }
+          else { allGuests = res.guests || []; }
+          buildIndividualGuestList();
+          applyFilters(false);
+          applyResponseFilters(false);
+        })
+        .withFailureHandler(function() { showToast('Connection error loading guest list.', true); })
+        .getAllGuests();
+    }
+
+    var searchTimer = null;
+    document.getElementById('searchInput').addEventListener('input', function() {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(applyFilters, 350);
+    });
+    document.getElementById('filterSelect').addEventListener('change', applyFilters);
+
+    function applyFilters(resetPage) {
+      var q = document.getElementById('searchInput').value.trim().toLowerCase();
+      var f = document.getElementById('filterSelect').value;
+
+      filteredGuests = allGuests.filter(function(g) {
+        var stat = guestStatusKey(g);
+        var isResp = (g.responded || stat !== 'pending');
+        if (q && g.mainGuest.toLowerCase().indexOf(q) === -1) return false;
+        if (f === 'responded' && !isResp) return false;
+        if (f === 'pending' && isResp) return false;
+        if (f === 'attending' && stat !== 'accepted') return false;
+        if (f === 'declined' && stat !== 'declined') return false;
+        return true;
+      });
+
+      if (sortKey) sortGuests();
+      if (resetPage !== false) currentPage = 1;
+      renderGuestTable();
+    }
+
+    document.querySelectorAll('th[data-sort]').forEach(function(th) {
+      th.addEventListener('click', function() {
+        var key = this.getAttribute('data-sort');
+        if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
+        sortGuests();
+        renderGuestTable();
+      });
+    });
+
+    function sortGuests() {
+      filteredGuests.sort(function(a, b) {
+        var av, bv;
+        if (sortKey === 'status') { av = guestStatusKey(a); bv = guestStatusKey(b); }
+        else { av = a[sortKey]; bv = b[sortKey]; }
+        if (typeof av === 'string') { av = av.toLowerCase(); bv = String(bv).toLowerCase(); }
+        if (av < bv) return -1 * sortDir;
+        if (av > bv) return 1 * sortDir;
+        return 0;
+      });
+    }
+
+    function statusBadge(g) {
+      var k = typeof g === 'string' ? g : guestStatusKey(g);
+      if (k === 'accepted') return '<span class="badge badge-accepted">Attending</span>';
+      if (k === 'declined') return '<span class="badge badge-declined">Declined</span>';
+      return '<span class="badge badge-pending">Pending</span>';
+    }
+
+    function renderGuestTable() {
+      var tbody = document.getElementById('tableBody');
+      var cards = document.getElementById('guestCards');
+      var empty = document.getElementById('emptyState');
+
+      if (!filteredGuests.length) {
+        tbody.innerHTML = '';
+        cards.innerHTML = '';
+        empty.style.display = 'block';
+        document.getElementById('pagination').innerHTML = '';
+        document.getElementById('paginationMobile').innerHTML = '';
+        updateBulkBar();
+        return;
+      }
+      empty.style.display = 'none';
+
+      var totalPages = Math.max(Math.ceil(filteredGuests.length / PAGE_SIZE), 1);
+      if (currentPage > totalPages) currentPage = totalPages;
+      var start = (currentPage - 1) * PAGE_SIZE;
+      var pageItems = filteredGuests.slice(start, start + PAGE_SIZE);
+
+      tbody.innerHTML = pageItems.map(function(g) {
+        var companionCount = g.companions.filter(function(n){ return n !== ''; }).length;
+        var isResp = (g.responded || guestStatusKey(g) !== 'pending');
+        return '<tr>' +
+          '<td><input type="checkbox" class="chk row-chk" data-id="' + g.id + '" ' + (selectedIds.has(g.id) ? 'checked' : '') + ' onchange="toggleRowSelect(' + g.id + ')" /></td>' +
+          '<td class="name-cell">' + escapeHtml(g.mainGuest) + '<div class="companion-count">' + companionCount + ' companion' + (companionCount === 1 ? '' : 's') + '</div></td>' +
+          '<td>' + g.invited + '</td>' +
+          '<td>' + statusBadge(g) + '</td>' +
+          '<td>' + (isResp ? (g.totalSeat != null ? g.totalSeat : (guestStatusKey(g) === 'accepted' ? 1 : 0)) : '\u2014') + '</td>' +
+          '<td><div class="row-actions">' +
+            '<button class="icon-btn" title="View" onclick="openViewModal(' + g.id + ')">&#128065;</button>' +
+            '<button class="icon-btn" title="Edit" onclick="openEditModal(' + g.id + ')">&#9998;</button>' +
+            '<button class="icon-btn" title="Delete" onclick="openDeleteModal(' + g.id + ')">&#128465;</button>' +
+          '</div></td>' +
+        '</tr>';
+      }).join('');
+
+      cards.innerHTML = pageItems.map(function(g) {
+        var companionCount = g.companions.filter(function(n){ return n !== ''; }).length;
+        var isResp = (g.responded || guestStatusKey(g) !== 'pending');
+        return '<div class="guest-card">' +
+          '<div class="gc-top">' +
+            '<input type="checkbox" class="chk row-chk" data-id="' + g.id + '" ' + (selectedIds.has(g.id) ? 'checked' : '') + ' onchange="toggleRowSelect(' + g.id + ')" />' +
+            '<div style="flex:1;"><div class="gc-name">' + escapeHtml(g.mainGuest) + '</div><div class="gc-meta">' + companionCount + ' companion' + (companionCount === 1 ? '' : 's') + ' &middot; ' + g.invited + ' invited</div></div>' +
+            statusBadge(g) +
+          '</div>' +
+          '<div class="gc-row"><span class="gc-meta">Attending</span><span>' + (isResp ? (g.totalSeat != null ? g.totalSeat : (guestStatusKey(g) === 'accepted' ? 1 : 0)) : '\u2014') + '</span></div>' +
+          '<div class="gc-actions">' +
+            '<button class="btn" style="flex:1;" onclick="openViewModal(' + g.id + ')">View</button>' +
+            '<button class="btn" style="flex:1;" onclick="openEditModal(' + g.id + ')">Edit</button>' +
+            '<button class="btn btn-danger" style="flex:1;" onclick="openDeleteModal(' + g.id + ')">Delete</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      renderPagination(totalPages);
+      updateBulkBar();
+    }
+
+    function renderPagination(totalPages) {
+      var info = filteredGuests.length + ' reservation' + (filteredGuests.length === 1 ? '' : 's') + ' &middot; page ' + currentPage + ' of ' + totalPages;
+      var btns = '<div class="page-btns">' +
+        '<button ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="goToPage(' + (currentPage - 1) + ')">&lsaquo;</button>' +
+        '<button ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="goToPage(' + (currentPage + 1) + ')">&rsaquo;</button>' +
+      '</div>';
+      var html = '<span>' + info + '</span>' + btns;
+      document.getElementById('pagination').innerHTML = html;
+      document.getElementById('paginationMobile').innerHTML = html;
+    }
+
+    function goToPage(p) { currentPage = p; renderGuestTable(); }
+
+    function toggleSelectAll() {
+      var checked = document.getElementById('selectAll').checked;
+      var start = (currentPage - 1) * PAGE_SIZE;
+      var pageItems = filteredGuests.slice(start, start + PAGE_SIZE);
+      pageItems.forEach(function(g) { if (checked) selectedIds.add(g.id); else selectedIds.delete(g.id); });
+      renderGuestTable();
+    }
+    function toggleRowSelect(id) {
+      if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+      updateBulkBar();
+    }
+    function updateBulkBar() {
+      var bar = document.getElementById('bulkBar');
+      if (selectedIds.size > 0) { bar.classList.add('show'); document.getElementById('bulkCount').textContent = selectedIds.size + ' selected'; }
+      else bar.classList.remove('show');
+    }
+    function bulkDelete() {
+      if (!selectedIds.size) return;
+      if (!confirm('Delete ' + selectedIds.size + ' selected guest(s), along with any RSVP responses they\'ve submitted? This cannot be undone.')) return;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.success) { showToast(res.message); selectedIds.clear(); loadGuestList(); loadDashboard(); }
+          else showToast((res && res.message) || 'Bulk delete failed.', true);
+        })
+        .withFailureHandler(function() { showToast('Connection error during bulk delete.', true); })
+        .bulkDeleteGuests(Array.from(selectedIds));
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    /* ============================================================
+       RESPONSES VIEW LOGIC (PER ALL GUESTS INDIVIDUALLY)
+    ============================================================ */
+    function buildIndividualGuestList() {
+      var list = [];
+      allGuests.forEach(function(g) {
+        var stat = guestStatusKey(g);
+        var isResp = (g.responded || stat !== 'pending');
+        if (!isResp) return;
+
+        list.push({
+          parentId: g.id,
+          name: g.mainGuest,
+          role: 'Main Guest',
+          isMain: true,
+          status: stat,
+          parentGuest: g.mainGuest,
+          timestamp: g.timestamp
+        });
+
+        g.companions.forEach(function(c, idx) {
+          if (c && c.trim() !== '') {
+            var cStat = normalizeStatus(g.companionStatuses[idx]);
+            if (cStat === 'pending') cStat = stat;
+            list.push({
+              parentId: g.id,
+              name: c.trim(),
+              role: 'Guest ' + (idx + 2),
+              isMain: false,
+              status: cStat,
+              parentGuest: g.mainGuest,
+              timestamp: g.timestamp
+            });
+          }
+        });
+      });
+      allIndividualGuests = list;
+    }
+
+    var searchResponseTimer = null;
+    document.getElementById('searchResponseInput').addEventListener('input', function() {
+      clearTimeout(searchResponseTimer);
+      searchResponseTimer = setTimeout(applyResponseFilters, 350);
+    });
+    document.getElementById('filterResponseSelect').addEventListener('change', applyResponseFilters);
+
+    function applyResponseFilters(resetPage) {
+      buildIndividualGuestList();
+      var q = document.getElementById('searchResponseInput').value.trim().toLowerCase();
+      var f = document.getElementById('filterResponseSelect').value;
+
+      filteredResponses = allIndividualGuests.filter(function(item) {
+        if (q && item.name.toLowerCase().indexOf(q) === -1 && item.parentGuest.toLowerCase().indexOf(q) === -1) {
+          return false;
+        }
+        if (f === 'attending' && item.status !== 'accepted') return false;
+        if (f === 'declined' && item.status !== 'declined') return false;
+        if (f === 'main' && !item.isMain) return false;
+        if (f === 'companion' && item.isMain) return false;
+        return true;
+      });
+
+      if (resetPage !== false) currentResponsePage = 1;
+      renderResponsesTable();
+    }
+
+    function renderResponsesTable() {
+      var tbody = document.getElementById('responseTableBody');
+      var cards = document.getElementById('responseCards');
+      var empty = document.getElementById('responseEmptyState');
+
+      if (!filteredResponses.length) {
+        tbody.innerHTML = '';
+        cards.innerHTML = '';
+        empty.style.display = 'block';
+        document.getElementById('paginationResponses').innerHTML = '';
+        document.getElementById('paginationResponsesMobile').innerHTML = '';
+        return;
+      }
+      empty.style.display = 'none';
+
+      var totalPages = Math.max(Math.ceil(filteredResponses.length / PAGE_SIZE), 1);
+      if (currentResponsePage > totalPages) currentResponsePage = totalPages;
+      var start = (currentResponsePage - 1) * PAGE_SIZE;
+      var pageItems = filteredResponses.slice(start, start + PAGE_SIZE);
+
+      tbody.innerHTML = pageItems.map(function(item) {
+        var timestampStr = item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Submitted';
+        return '<tr>' +
+          '<td class="name-cell">' + escapeHtml(item.name) + '</td>' +
+          '<td><span style="font-size:12px;color:var(--ink-soft);">' + item.role + '</span></td>' +
+          '<td>' + statusBadge(item.status) + '</td>' +
+          '<td><span style="font-size:13px;color:var(--ink-muted);">' + escapeHtml(item.parentGuest) + '</span></td>' +
+          '<td style="font-size:12px;color:var(--ink-muted);">' + timestampStr + '</td>' +
+          '<td><button class="icon-btn" title="View Reservation Details" onclick="openViewModal(' + item.parentId + ')">&#128065;</button></td>' +
+        '</tr>';
+      }).join('');
+
+      cards.innerHTML = pageItems.map(function(item) {
+        var timestampStr = item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Submitted';
+        return '<div class="guest-card">' +
+          '<div class="gc-top">' +
+            '<div style="flex:1;"><div class="gc-name">' + escapeHtml(item.name) + '</div><div class="gc-meta">' + item.role + ' &middot; with ' + escapeHtml(item.parentGuest) + '</div></div>' +
+            statusBadge(item.status) +
+          '</div>' +
+          '<div class="gc-row"><span class="gc-meta">Submitted</span><span>' + timestampStr + '</span></div>' +
+          '<div class="gc-actions"><button class="btn" style="width:100%;" onclick="openViewModal(' + item.parentId + ')">View Group Details</button></div>' +
+        '</div>';
+      }).join('');
+
+      renderResponsePagination(totalPages);
+    }
+
+    function renderResponsePagination(totalPages) {
+      var info = filteredResponses.length + ' attendee' + (filteredResponses.length === 1 ? '' : 's') + ' &middot; page ' + currentResponsePage + ' of ' + totalPages;
+      var btns = '<div class="page-btns">' +
+        '<button ' + (currentResponsePage <= 1 ? 'disabled' : '') + ' onclick="goToResponsePage(' + (currentResponsePage - 1) + ')">&lsaquo;</button>' +
+        '<button ' + (currentResponsePage >= totalPages ? 'disabled' : '') + ' onclick="goToResponsePage(' + (currentResponsePage + 1) + ')">&rsaquo;</button>' +
+      '</div>';
+      var html = '<span>' + info + '</span>' + btns;
+      document.getElementById('paginationResponses').innerHTML = html;
+      document.getElementById('paginationResponsesMobile').innerHTML = html;
+    }
+
+    function goToResponsePage(p) { currentResponsePage = p; renderResponsesTable(); }
+
+    function exportResponses() {
+      var rows = filteredResponses.length ? filteredResponses : allIndividualGuests;
+      if (!rows.length) { showToast('No responses to export.', true); return; }
+      var data = rows.map(function(item) {
+        return {
+          'Guest Name': item.name,
+          'Role': item.role,
+          'Status': item.status === 'accepted' ? 'Attending' : 'Declined',
+          'Primary Reservation Group': item.parentGuest,
+          'Submitted Date': item.timestamp ? new Date(item.timestamp).toLocaleString() : ''
+        };
+      });
+      var ws = XLSX.utils.json_to_sheet(data);
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Individual RSVP Responses');
+      XLSX.writeFile(wb, 'jem-jenny-individual-responses.xlsx');
+    }
+
+    /* ============================================================
+       ADD / EDIT MODAL
+    ============================================================ */
+    function buildCompanionFields(values) {
+      var wrap = document.getElementById('companionFields');
+      var roman = ['ii','iii','iv','v','vi','vii','viii','ix','x','xi','xii','xiii','xiv','xv','xvi','xvii','xviii','xix','xx'];
+      var html = '';
+      for (var i = 0; i < MAX_COMPANIONS; i++) {
+        var val = values && values[i] ? values[i] : '';
+        html += '<div class="field-row"><label>' + roman[i] + '. Guest ' + (i + 2) + '</label>' +
+          '<input type="text" id="fCompanion' + i + '" value="' + escapeHtml(val) + '" placeholder="Companion name" /></div>';
+      }
+      wrap.innerHTML = html;
+    }
+
+    function collectCompanionValues() {
+      var vals = [];
+      for (var i = 0; i < MAX_COMPANIONS; i++) vals.push(document.getElementById('fCompanion' + i).value.trim());
+      return vals;
+    }
+
+    function openAddModal() {
+      editingId = null;
+      document.getElementById('guestModalTitle').textContent = 'Add Guest';
+      document.getElementById('fMainGuest').value = '';
+      buildCompanionFields();
+      openModal('guestModal');
+    }
+
+    function openEditModal(id) {
+      var g = allGuests.filter(function(x) { return x.id === id; })[0];
+      if (!g) return;
+      editingId = id;
+      document.getElementById('guestModalTitle').textContent = 'Edit Guest';
+      document.getElementById('fMainGuest').value = g.mainGuest;
+      buildCompanionFields(g.companions);
+      openModal('guestModal');
+    }
+
+    function saveGuest() {
+      var mainGuest = document.getElementById('fMainGuest').value.trim();
+      if (!mainGuest) { showToast('Main guest name is required.', true); return; }
+      var companions = collectCompanionValues();
+      var payload = { mainGuest: mainGuest, companions: companions };
+      var btn = document.getElementById('guestSaveBtn');
+      btn.disabled = true;
+
+      var handler = function(res) {
+        btn.disabled = false;
+        if (res && res.success) {
+          showToast(res.message);
+          closeModal('guestModal');
+          loadGuestList();
+          loadDashboard();
+        } else {
+          showToast((res && res.message) || 'Failed to save guest.', true);
+        }
+      };
+
+      if (editingId) {
+        google.script.run.withSuccessHandler(handler).withFailureHandler(function(){ btn.disabled = false; showToast('Connection error.', true); }).updateGuest(editingId, payload);
+      } else {
+        google.script.run.withSuccessHandler(handler).withFailureHandler(function(){ btn.disabled = false; showToast('Connection error.', true); }).addGuest(payload);
+      }
+    }
+
+    /* ============================================================
+       VIEW MODAL
+    ============================================================ */
+    function openViewModal(id) {
+      var g = allGuests.filter(function(x) { return x.id === id; })[0];
+      if (!g) return;
+      var body = document.getElementById('viewModalBody');
+      var rows = '<div class="view-detail-row"><span class="vd-name">' + escapeHtml(g.mainGuest) + ' <span class="vd-meta">(Main Guest)</span></span>' + statusBadge(g) + '</div>';
+
+      g.companions.forEach(function(c, i) {
+        if (!c) return;
+        var st = normalizeStatus(g.companionStatuses[i]);
+        var badge = st === 'accepted' ? '<span class="badge badge-accepted">Attending</span>' :
+                    st === 'declined' ? '<span class="badge badge-declined">Declined</span>' :
+                    '<span class="badge badge-pending">Pending</span>';
+        rows += '<div class="view-detail-row"><span class="vd-name">' + escapeHtml(c) + ' <span class="vd-meta">(Guest ' + (i + 2) + ')</span></span>' + badge + '</div>';
+      });
+
+      var isResp = (g.responded || guestStatusKey(g) !== 'pending');
+      var count = g.totalSeat != null ? g.totalSeat : (guestStatusKey(g) === 'accepted' ? 1 : 0);
+      var footer = '<div style="margin-top:14px;font-size:12px;color:var(--ink-muted);">' +
+        (isResp ? 'Submitted ' + (g.timestamp ? new Date(g.timestamp).toLocaleString() : '') + ' &middot; ' + count + ' of ' + g.invited + ' attending' : 'No response yet') +
+        '</div>';
+
+      body.innerHTML = rows + footer;
+      openModal('viewModal');
+    }
+
+    /* ============================================================
+       DELETE MODAL
+    ============================================================ */
+    function openDeleteModal(id) {
+      var g = allGuests.filter(function(x) { return x.id === id; })[0];
+      if (!g) return;
+      deleteId = id;
+      document.getElementById('deleteTargetName').textContent = g.mainGuest;
+      openModal('deleteModal');
+    }
+    function confirmDelete() {
+      if (!deleteId) return;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          closeModal('deleteModal');
+          if (res && res.success) { showToast(res.message); selectedIds.delete(deleteId); loadGuestList(); loadDashboard(); }
+          else showToast((res && res.message) || 'Failed to delete guest.', true);
+        })
+        .withFailureHandler(function() { closeModal('deleteModal'); showToast('Connection error.', true); })
+        .deleteGuest(deleteId);
+    }
+
+    /* ============================================================
+       IMPORT / EXPORT (SheetJS)
+    ============================================================ */
+    function openImportModal() {
+      importRows = null;
+      document.getElementById('importFile').value = '';
+      document.getElementById('importPreview').innerHTML = '';
+      document.getElementById('importConfirmBtn').disabled = true;
+      openModal('importModal');
+    }
+
+    function handleImportFile(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          var wb = XLSX.read(evt.target.result, { type: 'binary' });
+          var sheet = wb.Sheets[wb.SheetNames[0]];
+          var rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+          var parsed = rows.map(function(r) {
+            var mainGuest = r['Main Guest'] || r['Main Guest Full Name'] || r['Main Guest Name'] || '';
+            var companions = [];
+            for (var i = 2; i <= 20; i++) companions.push(r['Guest ' + i] || '');
+            return { mainGuest: String(mainGuest).trim(), companions: companions.map(function(c){ return String(c).trim(); }) };
+          }).filter(function(r) { return r.mainGuest; });
+
+          importRows = parsed;
+          document.getElementById('importPreview').innerHTML = parsed.length ?
+            (parsed.length + ' guest(s) ready to import.') :
+            'No valid rows found. Make sure a "Main Guest" column exists.';
+          document.getElementById('importConfirmBtn').disabled = !parsed.length;
+        } catch (err) {
+          document.getElementById('importPreview').innerHTML = 'Could not read this file. Please check the format.';
+          document.getElementById('importConfirmBtn').disabled = true;
+        }
+      };
+      reader.readAsBinaryString(file);
+    }
+
+    function confirmImport() {
+      if (!importRows || !importRows.length) return;
+      var btn = document.getElementById('importConfirmBtn');
+      btn.disabled = true;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          if (res && res.success) { showToast(res.message); closeModal('importModal'); loadGuestList(); loadDashboard(); }
+          else showToast((res && res.message) || 'Import failed.', true);
+        })
+        .withFailureHandler(function() { btn.disabled = false; showToast('Connection error during import.', true); })
+        .importGuests(importRows);
+    }
+
+    function downloadTemplate() {
+      var headers = ['Main Guest', 'Guest 2', 'Guest 3', 'Guest 4', 'Guest 5', 'Guest 6', 'Guest 7', 'Guest 8', 'Guest 9', 'Guest 10',
+                      'Guest 11', 'Guest 12', 'Guest 13', 'Guest 14', 'Guest 15', 'Guest 16', 'Guest 17', 'Guest 18', 'Guest 19', 'Guest 20'];
+      var sample  = ['Juan dela Cruz', 'Maria dela Cruz', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''];
+      var ws = XLSX.utils.aoa_to_sheet([headers, sample]);
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Template');
+      XLSX.writeFile(wb, 'guest-list-template.xlsx');
+    }
+
+    function exportGuests() {
+      var rows = filteredGuests.length ? filteredGuests : allGuests;
+      var data = rows.map(function(g) {
+        var isResp = (g.responded || guestStatusKey(g) !== 'pending');
+        var row = { 'Main Guest': g.mainGuest, 'Main Status': isResp ? (guestStatusKey(g) === 'accepted' ? 'Attending' : 'Declined') : 'Pending' };
+        g.companions.forEach(function(c, i) {
+          row['Guest ' + (i + 2)] = c;
+          row['Guest ' + (i + 2) + ' Status'] = c ? (normalizeStatus(g.companionStatuses[i]) === 'accepted' ? 'Attending' : 'Declined') : '';
+        });
+        row['Invited'] = g.invited;
+        row['Attending'] = isResp ? (g.totalSeat != null ? g.totalSeat : (guestStatusKey(g) === 'accepted' ? 1 : 0)) : '';
+        row['Submitted At'] = g.timestamp ? new Date(g.timestamp).toLocaleString() : '';
+        return row;
+      });
+      var ws = XLSX.utils.json_to_sheet(data);
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Guest List');
+      XLSX.writeFile(wb, 'jem-jenny-guest-list.xlsx');
+    }
+
+    /* ============================================================
+       SETTINGS
+    ============================================================ */
+    function loadSettings() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          var active = res && typeof res.rsvpActive === 'boolean' ? res.rsvpActive : true;
+          document.getElementById('rsvpToggle').checked = active;
+          document.getElementById('rsvpStatusSub').textContent = active ? 'Guests can look up their name and submit' : 'The RSVP form is currently closed to guests';
+        })
+        .withFailureHandler(function() { showToast('Could not load settings.', true); })
+        .getSettings();
+    }
+
+    function loadPasswordNote() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('defaultPwNote').style.display = (res && res.isDefault) ? 'block' : 'none';
+        })
+        .withFailureHandler(function() {})
+        .isAdminPasswordDefault();
+    }
+
+    function openPwModal() {
+      ['mpwCurrent', 'mpwNew', 'mpwConfirm'].forEach(function(id) { document.getElementById(id).value = ''; });
+      document.getElementById('mpwNote').textContent = '';
+      openModal('pwModal');
+      setTimeout(function() { document.getElementById('mpwCurrent').focus(); }, 200);
+    }
+    ['mpwCurrent', 'mpwNew', 'mpwConfirm'].forEach(function(id) {
+      document.getElementById(id).addEventListener('keydown', function(e) { if (e.key === 'Enter') changePassword('m'); });
+    });
+
+    // p = '' for the Settings form, 'm' for the top-bar dialog
+    function changePassword(p) {
+      p = p || '';
+      var cur = document.getElementById(p + 'pwCurrent').value;
+      var nw  = document.getElementById(p + 'pwNew').value;
+      var cf  = document.getElementById(p + 'pwConfirm').value;
+      var note = document.getElementById(p + 'pwNote');
+      note.textContent = '';
+      if (!cur || !nw) { note.textContent = 'Enter your current and new password.'; return; }
+      if (nw.length < 6) { note.textContent = 'The new password must be at least 6 characters.'; return; }
+      if (nw !== cf) { note.textContent = 'The new passwords do not match.'; return; }
+      var btn = document.getElementById(p + 'pwSaveBtn');
+      btn.disabled = true;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          if (res && res.success) {
+            ['pwCurrent', 'pwNew', 'pwConfirm'].forEach(function(id) { document.getElementById(p + id).value = ''; });
+            if (p === 'm') closeModal('pwModal');
+            showToast(res.message || 'Password updated.');
+            loadPasswordNote();
+          } else {
+            note.textContent = (res && res.message) || 'Could not update the password.';
+          }
+        })
+        .withFailureHandler(function() { btn.disabled = false; note.textContent = 'Connection error. Please try again.'; })
+        .setAdminPassword(cur, nw);
+    }
+
+    function handleRsvpToggle() {
+      var isActive = document.getElementById('rsvpToggle').checked;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.success) { showToast(res.message); document.getElementById('rsvpStatusSub').textContent = isActive ? 'Guests can look up their name and submit' : 'The RSVP form is currently closed to guests'; }
+          else { showToast((res && res.message) || 'Failed to update settings.', true); document.getElementById('rsvpToggle').checked = !isActive; }
+        })
+        .withFailureHandler(function() { showToast('Connection error.', true); document.getElementById('rsvpToggle').checked = !isActive; })
+        .setRSVPActive(isActive);
+    }
+
+    /* ============================================================
+       MODAL HELPERS
+    ============================================================ */
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    document.querySelectorAll('.modal-overlay').forEach(function(ov) {
+      ov.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
+    });
+
+    var dropZone = document.getElementById('importDrop');
+    dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('drag'); });
+    dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('drag'); });
+    dropZone.addEventListener('drop', function(e) {
+      e.preventDefault(); dropZone.classList.remove('drag');
+      if (e.dataTransfer.files.length) {
+        document.getElementById('importFile').files = e.dataTransfer.files;
+        handleImportFile({ target: { files: e.dataTransfer.files } });
+      }
+    });
+  </script>
+</body>
+</html>
