@@ -1,4 +1,4 @@
-# Jem & Jenny — Wedding RSVP (Vercel + Neon)
+# Gem & Jenny — Wedding RSVP (Vercel + Neon)
 
 Dusty Blue Garden (ivory, dusty blue, slate blue, sage, muted olive, champagne, soft gold) · **February 16, 2027** · RSVP deadline **January 16, 2027**
 Made by Love, Anne (@loveanne.ph) & Nexcellent Solutions.

@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>RSVP Admin — Jem &amp; Jenny</title>
+  <title>RSVP Admin — Gem &amp; Jenny</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Pinyon+Script&family=Cinzel:wght@400;500;600;700&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     :root {
-      /* v2 template — Dusty Blue Garden (Jem & Jenny).
+      /* v2 template — Dusty Blue Garden (Gem & Jenny).
          Variable names kept from the original admin. */
       --maroon-deep: #3E525C;   /* deep slate */
       --maroon-dark: #4E6470;
@@ -460,7 +460,7 @@
   <div id="loginScreen">
     <div class="login-card"><div class="login-card-inner">
       <p class="login-eyebrow">RSVP Admin</p>
-      <h1 class="login-title">Jem &amp; Jenny</h1>
+      <h1 class="login-title">Gem &amp; Jenny</h1>
       <p class="login-sub">Sign in to manage the guest list</p>
       <input type="password" class="login-input" id="loginPassword" placeholder="Admin password" autocomplete="off" />
       <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
@@ -476,7 +476,7 @@
       <button class="sidebar-close" id="sidebarClose">&#10005;</button>
       <div class="sidebar-brand">
         <p class="sidebar-eyebrow">RSVP Admin</p>
-        <div class="sidebar-names">Jem &amp; Jenny</div>
+        <div class="sidebar-names">Gem &amp; Jenny</div>
       </div>
       <div class="sidebar-nav">
         <div class="nav-item active" data-view="dashboard"><span class="ic">&#9670;</span> Dashboard</div>
@@ -1450,7 +1450,7 @@
       var ws = XLSX.utils.json_to_sheet(data);
       var wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Individual RSVP Responses');
-      XLSX.writeFile(wb, 'jem-jenny-individual-responses.xlsx');
+      XLSX.writeFile(wb, 'gem-jenny-individual-responses.xlsx');
     }
 
     /* ============================================================
@@ -1650,7 +1650,7 @@
       var ws = XLSX.utils.json_to_sheet(data);
       var wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Guest List');
-      XLSX.writeFile(wb, 'jem-jenny-guest-list.xlsx');
+      XLSX.writeFile(wb, 'gem-jenny-guest-list.xlsx');
     }
 
     /* ============================================================

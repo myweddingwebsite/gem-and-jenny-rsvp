@@ -1,7 +1,7 @@
 {
-  "name": "jem-jenny-wedding-rsvp",
+  "name": "gem-jenny-wedding-rsvp",
   "version": "1.0.0",
-  "description": "Wedding RSVP — Jem & Jenny (Vercel Functions + Neon Postgres)",
+  "description": "Wedding RSVP — Gem & Jenny (Vercel Functions + Neon Postgres)",
   "scripts": {
     "dev": "vercel dev"
   },
